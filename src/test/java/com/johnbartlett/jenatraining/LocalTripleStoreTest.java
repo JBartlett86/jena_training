@@ -1,48 +1,38 @@
 package com.johnbartlett.jenatraining;
 
-import org.apache.jena.query.DatasetAccessor;
-import org.apache.jena.query.DatasetAccessorFactory;
-import org.apache.jena.query.Syntax;
+import org.apache.jena.query.*;
 import org.apache.jena.rdf.model.Model;
-import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.riot.RDFFormat;
-import org.apache.jena.riot.system.StreamRDF;
 import org.apache.jena.tdb.TDBFactory;
 import org.apache.jena.update.UpdateExecutionFactory;
 import org.apache.jena.update.UpdateFactory;
 import org.apache.jena.update.UpdateProcessor;
 import org.apache.jena.update.UpdateRequest;
-import org.apache.jena.vocabulary.DB;
 import org.apache.jena.vocabulary.VCARD;
-import org.junit.Ignore;
 import org.junit.Test;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 
 /**
- * Simple test of reading and writing to a remote triple store
+ * Testing reading and writing from a locally stored triple store
  *
- * Created by johnbartlett on 02/06/2016.
+ * Created by john.bartlett on 03/06/2016.
  */
-public class RemoteTripleStoreTest {
-
+public class LocalTripleStoreTest {
 
     private static final String URI = "http://www.jenatraining.com/2016/properties/1.0#";
 
-    private static final String SERVER_URL = "http://localhost:3030";
-
-    private static final String DB_NAME = "jenatraining";
-
-    @Ignore
     @Test
-    public void testWriteToRemoteTripleStore() throws IOException {
+    public void testLocalTripleStore() throws IOException {
 
-        DatasetAccessor dsa = DatasetAccessorFactory.createHTTP(String.format("%s/data", SERVER_URL));
-        Model m = dsa.getModel();
+        Dataset ds = TDBFactory.createDataset();
+        ds.begin(ReadWrite.WRITE) ;
+
+        Model m = ds.getDefaultModel();
 
         // properties
         Property writtenBy = m.createProperty(URI, "Was_written_by");
@@ -64,19 +54,19 @@ public class RemoteTripleStoreTest {
         // Execute Update
         UpdateRequest u = UpdateFactory.create();
         u.add("insert { " + bas.toString() + "} where {}");
-        UpdateProcessor p = UpdateExecutionFactory.createRemote(u, String.format("%s/%s/update", SERVER_URL, DB_NAME));
-        p.execute();
+        UpdateProcessor updateProcessor = UpdateExecutionFactory.create(u, ds);
+        updateProcessor.execute();
 
-        m.close();
-    }
+        ds.commit();
+        ds.end();
 
-    @Ignore
-    @Test
-    public void testReadFromTripleStore() {
-        DatasetAccessor dsa = DatasetAccessorFactory.createHTTP(String.format("%s/%s/data", SERVER_URL, DB_NAME));
-        Model m = dsa.getModel();
-        RDFDataMgr.write(System.out, m, RDFFormat.NTRIPLES);
-        m.close();
+        ds.begin(ReadWrite.READ);
+
+        String qs1 = "SELECT * {?s ?p ?o} LIMIT 10" ;
+        try(QueryExecution qExec = QueryExecutionFactory.create(qs1, ds)) {
+            ResultSet rs = qExec.execSelect() ;
+            ResultSetFormatter.out(rs) ;
+        }
     }
 
 }
