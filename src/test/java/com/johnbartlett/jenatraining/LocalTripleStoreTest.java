@@ -67,6 +67,8 @@ public class LocalTripleStoreTest {
             ResultSet rs = qExec.execSelect() ;
             ResultSetFormatter.out(rs) ;
         }
+
+        ds.end();
     }
 
 }
