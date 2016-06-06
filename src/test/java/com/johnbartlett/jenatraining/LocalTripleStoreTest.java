@@ -18,7 +18,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 /**
- * Testing reading and writing from a locally stored triple store
+ * Testing reading and writing from a local triple store
  *
  * Created by john.bartlett on 03/06/2016.
  */
